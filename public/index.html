@@ -12,31 +12,70 @@
             margin-top: 30px;
             font-family: 'Bellefair', serif;
             background-image: url("back1.jpeg");
+            background-position: center center;
+            background-repeat:  no-repeat;
+            background-attachment: fixed;
+            background-size:  cover;
+            background-color: firebrick;
         }
+        /*#particles-js{*/
+            /*position: fixed;*/
+            /*width: 100%;*/
+            /*height: 100%;*/
+            /*z-index: 0;*/
+            /*top: 0;*/
+            /*left: 0;*/
+            /*background-color: #b61924;*/
+
+            /*background-size: cover;*/
+            /*background-position: 50% 50%;*/
+            /*background-repeat: no-repeat;*/
+        /*}*/
         #messageArea{
             display: none;
         }
-        #us{
-            background-color: aquamarine;
+        #us,#us1{
+            background-color: lightcyan;
         }
         #chatbox,#chatbox1{
             font-size: 18px;
-            background-color: palegreen;
+            background-color: lightgreen;
+        }
+        #whisper{
+            font-size: 18px;
+            background-color: limegreen;
+            font-style: italic;
+        }
+        #userError,#disconnect{
+            font-size: 20px;
+            color: firebrick;
+            font-family: 'Bellefair', serif;
         }
         #list{
             background-color: aliceblue;
         }
         #btn{
             background-color: cornflowerblue;
-            height: 46px;
-            width: 750px;
             font-size: 18px;
-            border-radius: 12px;
+            color: black;
+            border-radius: 7px;
+            transition: 1s;
+            word-wrap: break-word;
+        }
+        body{
+            padding: 0;
+            margin: 0;
+        }
+
+        canvas{
+            width: 100%;
+            height: 100%;
         }
 
     </style>
 </head>
-<body>
+<body class="animated fadeIn" id="particles-js">
+
     <div>
         <h1 align="center" style="color: navy"><strong>IO - MESSENGER</strong></h1>
         <br>
@@ -51,6 +90,7 @@
                     <div class="form-group">
                         <label style="!important;font-size: 30px;margin-bottom: 20px; color: darkcyan   ">Enter Username</label>
                         <br>
+                        <div id = "userError"></div>
                         <input class = "form-control" id = "username" placeholder="Enter the username here..." style="font-size: 18px">
                         <br>
                         <input type="submit" class="btn btn-primary" value="Login" style="font-size: 20px">
@@ -59,7 +99,7 @@
 
             </div>
         </div>
-        <div id = "messageArea" class="row">
+        <div id = "messageArea" class="row animated fadeIn">
             <div class="col-md-4">
                 <div class="well" id="us">
                     <h3 align="center">Online users</h3>
@@ -67,17 +107,20 @@
                 </div>
             </div>
             <div class="col-md-8">
+                <div class="well" id="us1">
                 <div class="chat" id="chat"></div>
-                <button type="button" id="btn">Load Previous Conversations...</button>
+                <div id="disconnect" style="display: none"></div>
+                    <button type="button" class="btn btn-info btn-block" id="btn"><strong>Load Previous Conversations...</strong></button>
                 <form id="messageForm">
                     <div class="form-group">
                         <br>
                         <label style="font-size: 20px">Enter Message</label>
-                        <textarea class="form-control" id="message" placeholder="Enter your message here..." style="font-size: 18px"></textarea>
+                        <textarea class="form-control" id="message" placeholder="Use '/w <username>' to whisper.Enter your message here... " style="font-size: 18px"></textarea>
                         <br>
                         <input type="submit" class="btn btn-primary" value="Send Message" style="font-size: 20px">
                     </div>
                 </form>
+            </div>
             </div>
         </div>
     </div>
@@ -87,6 +130,13 @@
             integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
             crossorigin="anonymous"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <!--<script>-->
+        <!--particlesJS.load('particles-js',-->
+        <!--'particles.json', function () {-->
+                <!--console.log('particles.json loaded...');-->
+        <!--});-->
+    <!--</script>-->
     <script>
         $(function () {
             var socket = io.connect();
@@ -96,25 +146,42 @@
             var $messageArea = $('#messageArea');
             var $userFormArea = $('#userFormArea');
             var $userForm = $('#userForm');
+            var $userError = $('#userError');
             var $users = $('#users');
             var $username = $('#username');
             var btn = $('#btn');
+            var $disconnect = $('#disconnect');
 
             $messageForm.submit(function (e) {
                 e.preventDefault();
-                socket.emit('send message', $message.val());
+                socket.emit('send message', $message.val(),function (data) {
+                    $chat.append('<div class = "well" style="font-size: 18px" id="disconnect"><strong>' + data + '</strong>' + '</div>');
+                });
                 $message.val('');
             });
 
             socket.on('new message', function (data) {
-                $chat.append('<div class = "well" style="font-size: 18px" id="chatbox"><strong>' + data.user + '</strong>' + ' : ' + data.msg + '</div>');
+                $chat.append('<div class = "well animated fadeInUp" style="font-size: 18px" id="chatbox"><strong>' + data.user + '</strong>' + ' : ' + data.msg + '</div>');
             });
+
+            socket.on('whisper', function (data) {
+                $chat.append('<div class = "well animated fadeInUp" style="font-size: 18px" id="whisper"><strong>' + data.user + '</strong>' + ' : ' + data.msg + '</div>');
+            });
+
             $userForm.submit(function (e) {
                 e.preventDefault();
                 socket.emit('new user', $username.val(), function (data) {
-                    if (data) {
+                    if (data.bool) {
                         $userFormArea.hide();
                         $messageArea.show();
+                        $disconnect.show();
+                        console.log(data.us);
+                        $disconnect.html(data.us+' joined the chat!');
+                        setTimeout(function() {
+                            $disconnect.hide();
+                        }, 3000);
+                    }else {
+                        $userError.html('This Username is already taken. Please try again!');
                     }
                 });
                 $username.val('');
@@ -128,18 +195,26 @@
                 $users.html(html);
             });
 
+            socket.on('discon',function (data) {
+                    console.log(data);
+                    $disconnect.show();
+                    $disconnect.html(data.d+" went offline!");
+                    setTimeout(function() {
+                        $disconnect.hide();
+                    }, 3000);
+            });
+
             socket.on('all', function (data) {
                 $('#btn').on('click', function () {
                     data.forEach(function (mg) {
                          m = mg.msg;
                          u = mg.user;
-                        $chat.append('<div class = "well" id="chatbox1"><strong>' + u + '</strong>' + ' : ' + m + '</div>');
+                        $chat.append('<div class = "well animated fadeInUp" id="chatbox1"><strong>' + u + '</strong>' + ' : ' + m + '</div>');
                     });
-
-                    $('#btn').addClass('animated zoomOut');
-
+                    $(this).remove();
                 });
             });
         });
     </script>
+
 </body>
